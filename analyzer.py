@@ -1,12 +1,12 @@
 import librosa
 import numpy as np
-import os
+import os 
 import csv
 import matplotlib.pyplot as plt
 import librosa.display
 
 folder_path = "songs"
-output_csv = "audio_features.csv"
+output_csv = "audio_features_improved.csv"
 plots_folder = "plots"
 
 os.makedirs(plots_folder, exist_ok=True)
@@ -14,13 +14,30 @@ os.makedirs(plots_folder, exist_ok=True)
 frame_length = 2048
 hop_length = 512
 
+#Normalization
+def normalize(x, min_val, max_val):
+    if max_val - min_val == 0:
+        return 0
+    return max(0,min(1,(x - min_val) / (max_val - min_val)))
+
+#mood map
+def map_to_mood(valence, arousal):
+    if arousal > 0.7 and valence > 0.6:
+        return "Energetic / Happy"
+    elif arousal > 0.7 and valence < 0.4:
+        return "Tense / Aggressive"
+    elif arousal < 0.4 and valence < 0.4:
+        return "Sad / Calm"
+    elif arousal < 0.4 and valence > 0.6:
+        return "Peaceful / Positive"
+    else:
+        return "Neutral / Mixed"
+
 def process_file(file_path):
     try:
         y, sr = librosa.load(file_path, sr=None)
 
-        if np.max(np.abs(y)) > 0:
-            y = y / np.max(np.abs(y))
-
+        #Features
         rms = librosa.feature.rms(y=y, frame_length=frame_length, hop_length=hop_length)
         avg_rms = np.mean(rms)
 
@@ -33,15 +50,10 @@ def process_file(file_path):
         dbfs = 20 * np.log10(np.maximum(np.abs(y), 1e-6))
         avg_dbfs = np.mean(dbfs)
 
-        centroid = librosa.feature.spectral_centroid(
-            y=y, sr=sr, n_fft=frame_length, hop_length=hop_length
-        )
+        centroid = librosa.feature.spectral_centroid(y=y, sr=sr, hop_length=hop_length)
         avg_centroid = np.mean(centroid)
 
-        mfccs = librosa.feature.mfcc(
-            y=y, sr=sr, n_mfcc=13,
-            n_fft=frame_length, hop_length=hop_length
-        )
+        mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13, n_fft=frame_length, hop_length=hop_length)
         mfcc_mean = np.mean(mfccs, axis=1)
 
         tempo, beats = librosa.beat.beat_track(y=y, sr=sr)
@@ -49,44 +61,64 @@ def process_file(file_path):
             tempo = np.mean(tempo)
 
         chroma = librosa.feature.chroma_stft(y=y, sr=sr)
-        chroma_mean = chroma.mean(axis=1)
+        chroma_mean = np.mean(chroma, axis=1)
 
-        major = sum(chroma_mean[i] for i in [0,2,4,5,7,9,11])
-        minor = sum(chroma_mean[i] for i in [0,2,3,5,7,8,10])
-        mode = "Major" if major > minor else "Minor"
-
+        major = sum(chroma_mean[i] for i in range(12) if i in [0, 2, 4, 5, 7, 9, 11])
+        minor = sum(chroma_mean[i] for i in range(12) if i in [0, 2, 3, 5, 7, 8, 10])
+        mode  = "Major" if major > minor else "Minor"
         dynamic_level = np.std(rms)
         intensity = np.mean(librosa.onset.onset_strength(y=y, sr=sr))
 
-        energy_level = avg_rms
-        brightness = avg_centroid
+        #Normalized Features
+        norm_tempo = normalize(tempo, 40, 200)
+        norm_centroid = normalize(avg_centroid, 500, 4000)
+        norm_rms = normalize(avg_rms, 0, 0.3)
+        norm_intensity = normalize(intensity, 0, 5)
+        norm_dynamic = normalize(dynamic_level, 0, 0.1)
 
-        if tempo > 120 and dynamic_level > 0.05 and intensity > 1.5:
-            mood = "Epic / Cinematic"
-            confidence = 0.9
-        elif tempo > 140 and energy_level > 0.15:
-            mood = "Energetic / Hype"
-            confidence = 0.8
-        elif mode == "Minor" and tempo < 100:
-            mood = "Emotional / Melancholic"
-            confidence = 0.85
-        elif energy_level < 0.13 and brightness < 1800:
-            mood = "Dreamy / Ambient"
-            confidence = 0.7
-        elif mode == "Major" and tempo > 100:
-            mood = "Happy / Uplifting"
-            confidence = 0.75
-        elif mode == "Minor" and energy_level < 0.12:
-            mood = "Calm / Dark"
-            confidence = 0.7
-        else:
-            mood = "Neutral / Mixed"
-            confidence = 0.5
+        #VAE
+        #overall power
+        energy = (
+            0.5 * norm_rms +
+            0.3 * norm_dynamic +
+            0.2 * norm_intensity
+        )
+        
+        #arousal 
+        #calm or intense
+        arousal = (
+            0.3 * norm_rms +
+            0.2 * norm_dynamic +
+            0.2 * norm_intensity +
+            0.3 * norm_tempo
+        )
 
+        mode_val = 1 if mode == "Major" else 0
+        #valence
+        valence = (
+            0.4 * mode_val +
+            0.2 * norm_centroid +
+            0.2 * norm_tempo + 
+            0.2 * (1 - norm_dynamic)
+        )
+
+        #clamp
+        energy = min(max(energy, 0), 1)
+        arousal = min(max(arousal, 0), 1)
+        valence = min(max(valence, 0), 1)
+
+        #mood label
+        mood = map_to_mood(valence,arousal)
+        confidence = round((energy + arousal + valence) / 3, 2)
+
+        #CSV
         row = [
             os.path.basename(file_path),
             mood,
             confidence,
+            valence,
+            arousal,
+            energy,
             tempo,
             avg_rms,
             avg_dbfs,
@@ -97,6 +129,7 @@ def process_file(file_path):
 
         row.extend(mfcc_mean)
 
+        #plot
         plt.figure(figsize=(14, 10))
 
         plt.subplot(4, 1, 1)
@@ -104,7 +137,7 @@ def process_file(file_path):
         plt.title("Waveform")
 
         plt.subplot(4, 1, 2)
-        rms_vals = librosa.feature.rms(y=y, frame_length=frame_length, hop_length=hop_length)[0]
+        rms_vals = rms[0]
         times = librosa.frames_to_time(range(len(rms_vals)), sr=sr, hop_length=hop_length)
         plt.plot(times, rms_vals)
         plt.title("RMS Energy")
@@ -133,18 +166,28 @@ def process_file(file_path):
 
         return row
 
+
     except Exception as e:
         print(f"Error processing {file_path}: {e}")
         return None
-
-
+    
+#csv header
 header = [
-    "filename", "mood", "confidence",
-    "tempo", "rms", "dbfs", "centroid",
-    "dynamics", "intensity"
-] + [f"mfcc_{i+1}" for i in range(13)]
+    "filename",
+    "mood",
+    "confidence",
+    "valence",
+    "arousal",
+    "energy",
+    "tempo",
+    "avg_rms",
+    "avg_dbfs",
+    "avg_centroid",
+    "dynamic_level",
+    "intensity"
+]+[f"mfcc_{i+1}" for i in range(13)]
 
-
+#run
 with open(output_csv, mode="w", newline="") as file:
     writer = csv.writer(file)
     writer.writerow(header)
