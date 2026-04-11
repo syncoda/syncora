@@ -96,11 +96,10 @@ def process_file(file_path):
         mode_val = 1 if mode == "Major" else 0
         #valence
         valence = (
-            0.4 * mode_val +
-            0.2 * norm_centroid +
-            0.2 * norm_tempo + 
-            0.2 * (1 - norm_dynamic)
-        )
+            0.5 * mode_val +
+            0.25 * norm_centroid +
+            0.25 * (1 - norm_dynamic)
+        )#0.8 only here 
 
         #clamp
         energy = min(max(energy, 0), 1)
