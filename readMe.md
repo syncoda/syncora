@@ -90,6 +90,8 @@ If `/me` appears "not working", the most common cause is calling it without a be
 
 ## Project Setup (Backend)
 
+Backend source now lives under `backend/`.
+
 ### Prerequisites
 
 - Node.js 20+
@@ -216,12 +218,12 @@ Expected: song metadata from first call; `Content-Type: audio/mpeg` header from 
 
 ## Database Maintenance (SQLite)
 
-The current backend uses SQLite at `db/moodread.db`.
+The current backend uses SQLite at `backend/db/moodread.db`.
 
 ### How DB initializes
 
-- On server start, `db/schema.sql` runs with `CREATE TABLE IF NOT EXISTS`.
-- Songs are seeded from `audio_features.csv` if `songs` table is empty.
+- On server start, `backend/db/schema.sql` runs with `CREATE TABLE IF NOT EXISTS`.
+- Songs are seeded from root `audio_features.csv` if `songs` table is empty.
 
 ### Reset DB safely
 
@@ -232,21 +234,32 @@ if (Test-Path .\db\moodread.db) { Remove-Item .\db\moodread.db -Force }
 npm start
 ```
 
+Use this path now:
+
+```powershell
+if (Test-Path .\backend\db\moodread.db) { Remove-Item .\backend\db\moodread.db -Force }
+npm start
+```
+
 ### Common maintenance tasks
 
-- Reseed songs: remove `db/moodread.db` and restart.
-- Clean uploaded temp files: clear `uploads/` if needed.
+- Reseed songs: remove `backend/db/moodread.db` and restart.
+- Clean uploaded temp files: clear `backend/uploads/` if needed.
 - Backup DB locally:
 
   ```powershell
-  Copy-Item .\db\moodread.db .\db\moodread.backup.db
+  Copy-Item .\backend\db\moodread.db .\backend\db\moodread.backup.db
   ```
 
 ### What should not be committed
 
-- `db/moodread.db` (machine-local runtime data)
-- `uploads/` and `aiservice/uploads/` generated files
+- `backend/db/moodread.db` (machine-local runtime data)
+- `backend/uploads/` and `aiservice/uploads/` generated files
 - `.env` secrets
+
+### Frontend + Songs Location
+
+- Frontend dev server serves songs from root `songs/`.
 
 ---
 

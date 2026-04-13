@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parser Lab</title>
+  <style>
+    :root {
+      --bg-1: #f4f9ff;
+      --bg-2: #e7f2ff;
+      --ink: #10243d;
+      --muted: #5a6f86;
+      --panel: #ffffff;
+      --accent: #0b84f3;
+      --accent-2: #0bc8a5;
+      --danger: #b42318;
+      --border: #d7e4f3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 10%, #ffffff 0, #ffffff00 30%),
+        radial-gradient(circle at 90% 20%, #d7ecff 0, #d7ecff00 40%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .hero {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px 20px;
+      box-shadow: 0 8px 28px #0b84f31a;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+      letter-spacing: 0.2px;
+    }
+
+    .sub {
+      margin: 8px 0 0;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 6px 24px #10243d10;
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 1.1rem;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      resize: vertical;
+      font-size: 0.95rem;
+      line-height: 1.45;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    input[type="file"] {
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #f9fcff;
+      max-width: 100%;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, filter 0.12s ease;
+    }
+
+    button:hover { transform: translateY(-1px); filter: brightness(1.03); }
+
+    .primary {
+      background: linear-gradient(120deg, var(--accent), #3296ef);
+      color: #fff;
+    }
+
+    .secondary {
+      background: linear-gradient(120deg, var(--accent-2), #41d3b7);
+      color: #073b31;
+    }
+
+    .ghost {
+      background: #eff6ff;
+      color: #15406b;
+      border: 1px solid var(--border);
+    }
+
+    .status {
+      margin-top: 10px;
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .status.error { color: var(--danger); }
+
+    .summary {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 8px 0 12px;
+    }
+
+    .chip {
+      background: #eef7ff;
+      border: 1px solid #c9e3fb;
+      color: #0d4a7f;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.86rem;
+      font-weight: 600;
+    }
+
+    .result-list {
+      display: grid;
+      gap: 10px;
+      max-height: 460px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .paragraph {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: #fbfdff;
+    }
+
+    .paragraph .meta {
+      color: #4c6580;
+      font-size: 0.8rem;
+      margin-bottom: 6px;
+    }
+
+    .paragraph .text {
+      white-space: pre-wrap;
+      line-height: 1.5;
+      font-size: 0.93rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Parser Lab (Temporary)</h1>
+      <p class="sub">Use this page to test paragraph extraction only. No frontend app dependency.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Input</h2>
+        <textarea id="inputText" placeholder="Paste text here, or use file upload below."></textarea>
+        <div class="row">
+          <button id="runText" class="primary">Parse Text</button>
+          <button id="clearText" class="ghost">Clear</button>
+        </div>
+
+        <div class="row" style="margin-top: 14px;">
+          <input id="fileInput" type="file" accept=".txt,.pdf" />
+          <button id="runFile" class="secondary">Parse File</button>
+        </div>
+
+        <div id="status" class="status"></div>
+      </article>
+
+      <article class="card">
+        <h2>Output</h2>
+        <div id="summary" class="summary"></div>
+        <div id="resultList" class="result-list"></div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const summaryEl = document.getElementById("summary");
+    const resultListEl = document.getElementById("resultList");
+    const inputTextEl = document.getElementById("inputText");
+    const fileInputEl = document.getElementById("fileInput");
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.className = isError ? "status error" : "status";
+    }
+
+    function renderResult(data) {
+      const paragraphs = Array.isArray(data.paragraphs) ? data.paragraphs : [];
+
+      summaryEl.innerHTML = "";
+      resultListEl.innerHTML = "";
+
+      const chips = [
+        `format: ${data.format || "unknown"}`,
+        `paragraphs: ${paragraphs.length}`,
+      ];
+
+      for (const text of chips) {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = text;
+        summaryEl.appendChild(chip);
+      }
+
+      paragraphs.forEach((paragraph, index) => {
+        const item = document.createElement("div");
+        item.className = "paragraph";
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.textContent = `#${index + 1} • ${paragraph.length} chars`;
+
+        const text = document.createElement("div");
+        text.className = "text";
+        text.textContent = paragraph;
+
+        item.appendChild(meta);
+        item.appendChild(text);
+        resultListEl.appendChild(item);
+      });
+    }
+
+    async function parseText() {
+      const text = inputTextEl.value;
+      if (!text.trim()) {
+        setStatus("Enter some text before parsing.", true);
+        return;
+      }
+
+      setStatus("Parsing text...");
+      try {
+        const response = await fetch("/api/parser/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to parse text.");
+        }
+
+        renderResult(data);
+        setStatus(`Done. Extracted ${data.paragraphCount} paragraphs.`);
+      } catch (error) {
+        setStatus(error.message || "Failed to parse text.", true);
+      }
+    }
+
+    async function parseFile() {
+      const file = fileInputEl.files[0];
+      if (!file) {
+        setStatus("Choose a .txt or .pdf file first.", true);
+        return;
+      }
+
+      setStatus(`Parsing ${file.name}...`);
+      try {
+        const form = new FormData();
+        form.append("file", file);
+
+        const response = await fetch("/api/parser/preview", {
+          method: "POST",
+          body: form,
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to parse file.");
+        }
+
+        renderResult(data);
+        setStatus(`Done. Extracted ${data.paragraphCount} paragraphs from ${file.name}.`);
+      } catch (error) {
+        setStatus(error.message || "Failed to parse file.", true);
+      }
+    }
+
+    document.getElementById("runText").addEventListener("click", parseText);
+    document.getElementById("runFile").addEventListener("click", parseFile);
+    document.getElementById("clearText").addEventListener("click", () => {
+      inputTextEl.value = "";
+      fileInputEl.value = "";
+      summaryEl.innerHTML = "";
+      resultListEl.innerHTML = "";
+      setStatus("Cleared.");
+    });
+  </script>
+</body>
+</html>

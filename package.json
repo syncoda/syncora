@@ -4,9 +4,9 @@
   "description": "We begin with the raw audio signal (waveform), represented as a discrete sequence of amplitude values:",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js",
+    "test": "mocha backend/tests/parsers.test.js"
   },
   "repository": {
     "type": "git",
@@ -25,10 +25,15 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "groq-sdk": "^1.1.2",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
+    "openai": "^6.34.0",
     "pdf-parse": "^2.4.5",
     "sqlite3": "^6.0.1",
     "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "mocha": "^11.3.0"
   }
 }
